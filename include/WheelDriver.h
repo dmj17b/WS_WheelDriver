@@ -37,15 +37,14 @@ class Motor{
         float _currentVel = 0.0; // Current velocity
         float _lastPos = 0.0; // Last position for velocity calculation
         float _lastTime = 0.0; // Last time for velocity calculation
-        float Kp = 0.0; // Proportional gain for PID control
-        float Ki = 0.0; // Integral gain for PID control
-        float Kd = 0.0; // Derivative gain for PID control
-
-
+        float _Kp = 0.0; // Proportional gain for PID control
+        float _Ki = 0.0; // Integral gain for PID control
+        float _Kd = 0.0; // Derivative gain for PID control
 
 
         // Basic functions
         void fwd_drive(int dutyCycle);
+        void setGains(float Kp, float Ki, float Kd);
         float getPos();
         float getVel();
 
@@ -80,3 +79,10 @@ float Motor::getPos(){
     float pos = (_encoderCount / (float)_encoderCPR) * 360.0;
     return pos;
 }
+
+void Motor::setGains(float Kp, float Ki, float Kd){
+    // Set PID gains
+    _Kp = Kp;
+    _Ki = Ki;
+    _Kd = Kd;
+};

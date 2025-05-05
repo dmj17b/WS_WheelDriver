@@ -1,25 +1,42 @@
-/* Unit testing of serial communication methods between
-Teensy 4.1 and computer through USB port
-*/
+// Teensy sketch
+
 #include <Arduino.h>
 
+
+enum Cmd : uint8_t { CMD_SET_VEL=1, CMD_GET_VEL=2, /*…*/ };
+
+void handleLine(const String& l);
+
 void setup() {
-    Serial.begin(115200); // Start serial communication at 115200 baud rate
-    while (!Serial) {
-        ; // Wait for serial port to connect. Needed for native USB port only
-    }
-    Serial.println("Serial communication test started.");
+  Serial.begin(115200);
 }
 
 void loop() {
-    // Test serial communication by sending a message every second
-    while(Serial.available()) {
-        int val = Serial.parseInt(); // Read an integer from the serial port
-        float val2 = Serial.parseFloat(); // Read a float from the serial port
-        Serial.print("Received integer: ");
-        Serial.print(val); // Print the received integer
-        Serial.print("  Received float: ");
-        Serial.println(val2); // Print the received float
-    }
+  // 1) Read a whole line (ASCII example)
+  if (Serial.available()) {
+    String line = Serial.readStringUntil('\n');
+    line.trim();
+    if (line.length()>0) handleLine(line);
+  }
+
+  // 2) ... do your motor control in background ...
 }
 
+void handleLine(const String& l) {
+  // parse CSV: motorID,cmd,value
+  int parts = 0;
+  uint8_t motorID = l.toInt();            // before first comma
+  int p1 = l.indexOf(',');
+  int p2 = l.indexOf(',', p1+1);
+  String cmd = l.substring(p1+1, p2);
+  float   val = l.substring(p2+1).toFloat();
+  float v = 2.5;
+
+  if (cmd == "setVel") {
+    Serial.printf("ACK,%u,setVel\n", motorID);
+  }
+  else if (cmd == "getVel") {
+    Serial.printf("RPT,%u,vel,%.3f\n", motorID, v);
+  }
+  // … add more commands …
+}

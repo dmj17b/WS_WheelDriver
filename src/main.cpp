@@ -7,9 +7,8 @@
 
  #include <Arduino.h>
  #include <SPI.h>
- #include "LS7466.h"
  #include "WheelDriver.h"
- #include "SerComs.h"
+
  
  
  
@@ -96,11 +95,8 @@
  
  /***** LOOP ******/
  void loop() {
-  // Time stamp to check comms rate
-  unsigned long firstTime = micros();
+
   cmd_msg = com.getCMD();
-  unsigned long secondTime = micros();
-  unsigned long elapsedTime = secondTime - firstTime;
 
   // Check if a command was received
   if(cmd_msg.cmd != "none"){

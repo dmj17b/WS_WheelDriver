@@ -88,6 +88,7 @@
    for(int i = 0; i < 8; i++){
      motors[i]->setGains(Kp, Ki, Kd); // Set gains for each motor
    }
+   Serial.println("Program started");
    
  }
  
@@ -102,9 +103,11 @@
   if(cmd_msg.cmd != "none"){
     // Check if the command is for a specific motor
     if(cmd_msg.motorID < 8){
-      Serial.print("Motor ");
+      Serial.print("MotorID: ");
       Serial.print(cmd_msg.motorID);
-      Serial.print(" target velocity set to ");
+      Serial.print("  Command: ");
+      Serial.print(cmd_msg.cmd);
+      Serial.print("  Value: ");
       Serial.println(cmd_msg.val);
     }
     else{

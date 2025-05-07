@@ -75,7 +75,7 @@ MotorCommand Comms::handleLine(const String& l) {
 		cmd_msg.cmd = cmd;
 		cmd_msg.val = val;
   
-		return cmd_msg;
+    return cmd_msg;
     // … add more commands …
 
   }

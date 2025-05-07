@@ -44,6 +44,8 @@ class Motor{
 
 
         // Motor Control functions
+        uint8_t _motorID; // Motor ID
+        uint8_t _controlMode;
         void update(MotorCommand cmd_msg); // Update function to handle commands
         void controlLoop();     // Main control loop function
         void fwd_drive(int dutyCycle);  //FWD drive function
@@ -151,7 +153,31 @@ void Motor::coast(){
 void Motor::update(MotorCommand cmd_msg){
     // Update the command message
     this->cmd_msg = cmd_msg;
-    if(cmd_msg.cmd == "mode");
+    if(cmd_msg.cmd == "setMode"){
+        _controlMode = cmd_msg.val;
+    }
+    else if (cmd_msg.cmd == "setPos"){
+        _targetPos = cmd_msg.val;
+    }
+    else if (cmd_msg.cmd == "setVel"){
+        _targetVel = cmd_msg.val;
+    }
+    else if (cmd_msg.cmd == "setDuty"){
+        _motorDutyCycle = cmd_msg.val;
+    }
+    else if (cmd_msg.cmd == "brake"){
+        brake();
+    }
+    else if (cmd_msg.cmd == "coast"){
+        coast();
+    }
+    else if (cmd_msg.cmd == "estop"){
+        estop();
+    }
+    else{
+        Serial.println("Invalid command");
+    }
+
 
 };
 
@@ -166,43 +192,24 @@ void Motor::controlLoop(){
     _lastPos = _currentPos;
     _lastTime = micros();
 
-    // If/Else switch for control mode
-    if (cmd_msg.cmd == "pos"){
-        positionControl(cmd_msg.val);
-    }
-    else if (cmd_msg.cmd == "vel"){
-        velocityControl(cmd_msg.val);
-    }
-    else if (cmd_msg.cmd == "brake"){
-        brake();
-    }
-    else if (cmd_msg.cmd == "coast"){
-        coast();
-    }
-    else if (cmd_msg.cmd == "estop"){
-        estop();
-    }
-    else if (cmd_msg.cmd == "setKp"){
-        _Kp = cmd_msg.val;
-    }
-    else if (cmd_msg.cmd == "setKi"){
-        _Ki = cmd_msg.val;
-    }
-    else if (cmd_msg.cmd == "setKd"){
-        _Kd = cmd_msg.val;
-    }
-    else if (cmd_msg.cmd == "reverse"){
-        reverse = !reverse;
-    }
-    else if (cmd_msg.cmd == "safety"){
-        safety_on = !safety_on;
-    }
-    else if (cmd_msg.cmd == "none"){
-        // Do nothing
-    }
-    else{
-        // Default to brake if something else is received
-        brake();
+    // Switch control loop based on control mode:
+    switch(_controlMode){
+        case 0: // Position control
+            positionControl(_targetPos);
+            break;
+        case 1: // Velocity control
+            velocityControl(_targetVel);
+            break;
+        case 2: // Duty cycle control
+            if (_motorDutyCycle > 0){
+                fwd_drive(_motorDutyCycle);
+            }
+            else{
+                rev_drive(_motorDutyCycle);
+            }
+            break;
+        default:
+            Serial.println("Invalid control mode");
     }
 
 

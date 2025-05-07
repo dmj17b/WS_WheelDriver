@@ -151,7 +151,7 @@ void Motor::coast(){
 void Motor::update(MotorCommand cmd_msg){
     // Update the command message
     this->cmd_msg = cmd_msg;
-    if(cmd_msg.cmd == "mode")
+    if(cmd_msg.cmd == "mode");
 
 };
 

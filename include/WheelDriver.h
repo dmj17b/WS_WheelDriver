@@ -13,14 +13,6 @@ class Motor{
         // Takes in encoder chip select pin, encoder number, motor enable pin, and direction pins
         Motor(uint8_t encoderCS, uint8_t encAxis, uint8_t EN, uint8_t DIR_A, uint8_t DIR_B);
 
-        enum controlMode{
-            POS_CONTROL = 0,
-            VEL_CONTROL = 1,
-            COAST = 2,
-            BRAKE = 3,
-            E_STOP = 4,
-        };
-
         // Motor init pins
         uint8_t _motorEnablePin; // Motor enable pin
         uint8_t _motorDirAPin; // Motor direction A pin
@@ -31,7 +23,6 @@ class Motor{
         uint8_t encAxis; // Encoder number (0 or 1)
         long _encoderCount; // Motor encoder count
         int _encoderCPR = 12; // Encoder counts per revolution
-
 
         // Motor control variables
         bool reverse = false; // Reverse motor direction
@@ -49,10 +40,11 @@ class Motor{
         float _Kd = 0.0; // Derivative gain for PID control
 
         // Main control parsing function:
-        void parseCommand(MotorCommand cmd_msg);
+        MotorCommand cmd_msg; // Motor command message
 
 
         // Motor Control functions
+        void update(MotorCommand cmd_msg); // Update function to handle commands
         void controlLoop();     // Main control loop function
         void fwd_drive(int dutyCycle);  //FWD drive function
         void rev_drive(int dutyCycle);  //REV drive function
@@ -62,8 +54,9 @@ class Motor{
         void coast();
         void estop();
         void setGains(float Kp, float Ki, float Kd);
+        
 
-        // Data retrieval functions
+        // Data retrieval functions (for returning to host computer)
         float getPos();
         float getVel();
 
@@ -93,13 +86,14 @@ Motor :: Motor(uint8_t encoderCS, uint8_t encAxis, uint8_t EN, uint8_t DIR_A, ui
 
 // Function to retrieve current position
 float Motor::getPos(){
-    // Read the encoder count
-    _encoderCount = _encoder->readCounter(encAxis);
-    // Convert to position in degrees
-    float pos = (_encoderCount / ((float)_encoderCPR*_gearRatio)) * 360.0;
-    return pos;
-}
+    return _currentPos;
+};
+// Function to retrieve current velocity
+float Motor::getVel(){
+    return _currentVel;
+};
 
+// Function to set control gains
 void Motor::setGains(float Kp, float Ki, float Kd){
     // Set PID gains
     _Kp = Kp;
@@ -153,26 +147,63 @@ void Motor::coast(){
     analogWrite(_motorEnablePin, 0);
 };
 
+// UPDATE FUNCTION
+void Motor::update(MotorCommand cmd_msg){
+    // Update the command message
+    this->cmd_msg = cmd_msg;
+    if(cmd_msg.cmd == "mode")
+
+};
+
 // MAIN CONTROL LOOP
 void Motor::controlLoop(){
-    // Calculate the current position and velocity
-    _currentPos = getPos();
-    _currentVel = (_currentPos - _lastPos) / (millis() - _lastTime);
+    // Calculate the current position (angle) and velocity
+    _encoderCount = _encoder->readCounter(encAxis);
+    _currentPos = (_encoderCount / ((float)_encoderCPR*_gearRatio))*2*PI;    // Convert encoder count to position in radians
+    _currentVel = (_currentPos - _lastPos) / (pow(10,6)*(micros() - _lastTime));    // Calculate velocity in radians per second
+
+    // Update the last position and time
     _lastPos = _currentPos;
-    _lastTime = millis();
+    _lastTime = micros();
 
-    // Calculate the error
-    float posError = _targetPos - _currentPos;
-    float velError = _targetVel - _currentVel;
-
-    // Calculate the PID output
-    float output = (_Kp * posError) + (_Ki * velError) + (_Kd * (velError - posError));
-
-    // Set the motor duty cycle
-    if (output > 0){
-        fwd_drive(output);
+    // If/Else switch for control mode
+    if (cmd_msg.cmd == "pos"){
+        positionControl(cmd_msg.val);
+    }
+    else if (cmd_msg.cmd == "vel"){
+        velocityControl(cmd_msg.val);
+    }
+    else if (cmd_msg.cmd == "brake"){
+        brake();
+    }
+    else if (cmd_msg.cmd == "coast"){
+        coast();
+    }
+    else if (cmd_msg.cmd == "estop"){
+        estop();
+    }
+    else if (cmd_msg.cmd == "setKp"){
+        _Kp = cmd_msg.val;
+    }
+    else if (cmd_msg.cmd == "setKi"){
+        _Ki = cmd_msg.val;
+    }
+    else if (cmd_msg.cmd == "setKd"){
+        _Kd = cmd_msg.val;
+    }
+    else if (cmd_msg.cmd == "reverse"){
+        reverse = !reverse;
+    }
+    else if (cmd_msg.cmd == "safety"){
+        safety_on = !safety_on;
+    }
+    else if (cmd_msg.cmd == "none"){
+        // Do nothing
     }
     else{
-        rev_drive(-output);
+        // Default to brake if something else is received
+        brake();
     }
+
+
 }

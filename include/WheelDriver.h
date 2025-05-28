@@ -7,6 +7,13 @@
 #include "SerComs.h"
 #include <Arduino.h>
 
+#define IDLE 0
+#define POSITION 1
+#define VELOCITY 2
+#define DUTY 3
+#define BRAKE 4
+
+
 class Motor{
     public:
         // Constructor
@@ -35,6 +42,8 @@ class Motor{
         float _currentVel = 0.0; // Current velocity
         float _lastPos = 0.0; // Last position for velocity calculation
         float _lastTime = 0.0; // Last time for velocity calculation
+        float _pos_error = 0.0; // Position error for PID control
+        float _vel_error = 0.0; // Velocity error for PID control
         float _Kp = 0.0; // Proportional gain for PID control
         float _Ki = 0.0; // Integral gain for PID control
         float _Kd = 0.0; // Derivative gain for PID control
@@ -177,8 +186,6 @@ void Motor::update(MotorCommand cmd_msg){
     else{
         Serial.println("Invalid command");
     }
-
-
 };
 
 // MAIN CONTROL LOOP
@@ -191,6 +198,7 @@ void Motor::controlLoop(){
     // Update the last position and time
     _lastPos = _currentPos;
     _lastTime = micros();
+
 
     // Switch control loop based on control mode:
     switch(_controlMode){
@@ -212,5 +220,20 @@ void Motor::controlLoop(){
             Serial.println("Invalid control mode");
     }
 
+}
 
+void Motor::positionControl(float targetPos){
+    // Calculate the error
+    float pos_error = targetPos - _currentPos;
+
+    // Calculate the control output using PID control
+    float controlOutput = _Kp * pos_error ; // Proportional control
+
+    // Set the motor duty cycle based on the control output
+    if (controlOutput > 0){
+        fwd_drive(controlOutput);
+    }
+    else{
+        rev_drive(-controlOutput);
+    }
 }

@@ -55,12 +55,13 @@ MotorCommand Comms::getCMD(){
 					return handleLine(line);
 				} 
     }
-		else{
-			cmd_msg.motorID = 0;
-			cmd_msg.cmd = "none";
-			cmd_msg.val = 0;
-		}
-			return cmd_msg;
+    else{
+        cmd_msg.motorID = 0;
+        cmd_msg.cmd = "none";
+        cmd_msg.val = 0;
+    }
+    
+    return cmd_msg;
 }
 
 /* Function used to parse a serial command*/

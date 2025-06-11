@@ -1,9 +1,4 @@
-/**
- * LS7466 Decoder Library Usage Example
- * 
- * This example demonstrates how to use the updated LS7466 library,
- * following the approach used in the datasheet example.
- */
+// This is the main file for the WheelDriver project, which controls a set of motors using LS7466 encoders.
 
  #include <Arduino.h>
  #include <SPI.h>
@@ -28,7 +23,7 @@
  #define MOTOR2_DIR_A_PIN 7
  #define MOTOR2_DIR_B_PIN 8
  
- #define MOTOR3_EN_PIN 20
+ #define MOTOR3_EN_PIN 20 // Not a pwm pin :(
  #define MOTOR3_DIR_A_PIN 19
  #define MOTOR3_DIR_B_PIN 18
  
@@ -36,42 +31,48 @@
  #define MOTOR4_DIR_A_PIN 25
  #define MOTOR4_DIR_B_PIN 26
  
- #define MOTOR5_EN_PIN 17
+ #define MOTOR5_EN_PIN 17 // Not a pwm pin :(
  #define MOTOR5_DIR_A_PIN 16
  #define MOTOR5_DIR_B_PIN 38
  
- #define MOTOR6_EN_PIN 27
+ #define MOTOR6_EN_PIN 27 // Not a pwm pin :(
  #define MOTOR6_DIR_A_PIN 28
  #define MOTOR6_DIR_B_PIN 29
  
- #define MOTOR7_EN_PIN 41
+ #define MOTOR7_EN_PIN 41 // Not a pwm pin :(
  #define MOTOR7_DIR_A_PIN 40
  #define MOTOR7_DIR_B_PIN 31
  
- #define MOTOR8_EN_PIN 30
+ #define MOTOR8_EN_PIN 30 // Not a pwm pin :(
  #define MOTOR8_DIR_A_PIN 31
  #define MOTOR8_DIR_B_PIN 32
- 
+
+  // Create instances of the LS7466 class
+ LS7466 decoder1(DECODER1_CS_PIN);
+ LS7466 decoder2(DECODER2_CS_PIN);
+ LS7466 decoder3(DECODER3_CS_PIN);
+ LS7466 decoder4(DECODER4_CS_PIN);
  
  // Initialize motor objects
- Motor FL1 = Motor(DECODER1_CS_PIN, 0, MOTOR1_EN_PIN, MOTOR1_DIR_A_PIN, MOTOR1_DIR_B_PIN);
- Motor FL2 = Motor(DECODER1_CS_PIN, 1, MOTOR2_EN_PIN, MOTOR2_DIR_A_PIN, MOTOR2_DIR_B_PIN);
+ Motor M0 = Motor(&decoder1, 1, MOTOR1_EN_PIN, MOTOR1_DIR_A_PIN, MOTOR1_DIR_B_PIN);
+ Motor M1 = Motor(&decoder1, 0, MOTOR2_EN_PIN, MOTOR2_DIR_A_PIN, MOTOR2_DIR_B_PIN);
  
- Motor FR1 = Motor(DECODER2_CS_PIN, 0, MOTOR3_EN_PIN, MOTOR3_DIR_A_PIN, MOTOR3_DIR_B_PIN);
- Motor FR2 = Motor(DECODER2_CS_PIN, 1, MOTOR4_EN_PIN, MOTOR4_DIR_A_PIN, MOTOR4_DIR_B_PIN);
+ Motor M2 = Motor(&decoder2, 0, MOTOR3_EN_PIN, MOTOR3_DIR_A_PIN, MOTOR3_DIR_B_PIN);
+ Motor M3 = Motor(&decoder2, 1, MOTOR4_EN_PIN, MOTOR4_DIR_A_PIN, MOTOR4_DIR_B_PIN);
  
- Motor BL1 = Motor(DECODER3_CS_PIN, 0, MOTOR5_EN_PIN, MOTOR5_DIR_A_PIN, MOTOR5_DIR_B_PIN);
- Motor BL2 = Motor(DECODER3_CS_PIN, 1, MOTOR6_EN_PIN, MOTOR6_DIR_A_PIN, MOTOR6_DIR_B_PIN);
+ Motor M4 = Motor(&decoder3, 0, MOTOR5_EN_PIN, MOTOR5_DIR_A_PIN, MOTOR5_DIR_B_PIN);
+ Motor M5 = Motor(&decoder3, 1, MOTOR6_EN_PIN, MOTOR6_DIR_A_PIN, MOTOR6_DIR_B_PIN);
  
- Motor BR1 = Motor(DECODER4_CS_PIN, 0, MOTOR7_EN_PIN, MOTOR7_DIR_A_PIN, MOTOR7_DIR_B_PIN);
- Motor BR2 = Motor(DECODER4_CS_PIN, 1, MOTOR8_EN_PIN, MOTOR8_DIR_A_PIN, MOTOR8_DIR_B_PIN);
- 
- Motor* motors[] = {&FL1, &FL2, &FR1, &FR2, &BL1, &BL2, &BR1, &BR2};
+ Motor M6 = Motor(&decoder4, 0, MOTOR7_EN_PIN, MOTOR7_DIR_A_PIN, MOTOR7_DIR_B_PIN);
+ Motor M7 = Motor(&decoder4, 1, MOTOR8_EN_PIN, MOTOR8_DIR_A_PIN, MOTOR8_DIR_B_PIN);
+
+ // Create an array of motor pointers for easy access
+ Motor* motors[] = {&M0, &M1, &M2, &M3, &M4, &M5, &M6, &M7};
  
  // Define motor gains for all motors:
- float Kp = 0.1; // Proportional gain
+ float Kp = 1.0; // Proportional gain
  float Ki = 0.01; // Integral gain
- float Kd = 0.01; // Derivative gain
+ float Kd = 0.0; // Derivative gain
  
 
  // Set up serial communication
@@ -96,23 +97,18 @@
  
  /***** LOOP ******/
  void loop() {
+    // Check for incoming commands. If no command is received, cmd_msg will be set to "none"
+    cmd_msg = com.getCMD();
 
-  cmd_msg = com.getCMD();
-
-  // Check if a command was received
-  if(cmd_msg.cmd != "none"){
-    // Check if the command is for a specific motor
-    if(cmd_msg.motorID < 8){
-      Serial.print("MotorID: ");
-      Serial.print(cmd_msg.motorID);
-      Serial.print("  Command: ");
-      Serial.print(cmd_msg.cmd);
-      Serial.print("  Value: ");
-      Serial.println(cmd_msg.val);
+    // If a valid command is received, update the corresponding motor
+    if (cmd_msg.motorID < 8 && cmd_msg.cmd != "none") { 
+      motors[cmd_msg.motorID]->update(cmd_msg); 
     }
-    else{
-      Serial.println("Invalid motor ID");
+    
+    // Run control loop for each motor
+    for(int i = 0; i < 8; i++){
+      motors[i]->controlLoop();
     }
-  }
-
+    
+    delay(10); // Small delay to prevent overwhelming the loop
  }

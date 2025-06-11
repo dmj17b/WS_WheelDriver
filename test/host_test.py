@@ -22,14 +22,14 @@ ser  = serial.Serial(port, 115200, timeout=0.1)
 print(f"→ Connected to Teensy on {port}")
 
 # ── reader thread ───────────────────────────────────────────
-def read_thread():
-    while True:
-        line = ser.readline().decode('ascii', errors='ignore')#.strip()
-        if line:
-            print(line)
+# def read_thread():
+#     while True:
+#         line = ser.readline().decode('ascii', errors='ignore')#.strip()
+#         if line:
+#             print(line)
 
-t = threading.Thread(target=read_thread, daemon=True)
-t.start()
+# t = threading.Thread(target=read_thread, daemon=True)
+# t.start()
 
 # ── send helper ─────────────────────────────────────────────
 def send(motor_id, cmd, val):
@@ -38,7 +38,8 @@ def send(motor_id, cmd, val):
 
 # ── example ─────────────────────────────────────────────────
 if __name__ == "__main__":
-    send(0, 'setVel', 3.20)
-    send(1, 'setVel', 3.20)
-    send(2, 'setMode', 1)
-    time.sleep(1)
+    send(0, 'setMode', 3)
+    time.sleep(0.1)  # wait for Teensy to process the command
+    send(0, 'setDuty', 1000)
+
+

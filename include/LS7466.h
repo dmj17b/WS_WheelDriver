@@ -141,10 +141,13 @@
      
      // Initialize SPI with settings similar to the example
      SPI.begin();
+     delay(1);
      SPI.setDataMode(SPI_MODE0);  // CPOL=0, CPHA=0
+     delay(1);   
      SPI.setBitOrder(MSBFIRST);   // MSB first
+     delay(1);
      SPI.setClockDivider(SPI_CLOCK_DIV4); // fosc/4
-     
+     delay(1);
      // Reset all registers
      loadResetReg(RST_CNTRxy);
      loadResetReg(RST_SSTRxy);

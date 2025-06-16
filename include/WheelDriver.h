@@ -78,12 +78,13 @@ class Motor{
 // Constructor for Motor class
 Motor :: Motor(LS7466 *encoder, uint8_t encAxis, uint8_t EN, uint8_t DIR_A, uint8_t DIR_B){
     // Initialize the LS7466 encoder
+    _encAxis = encAxis; // Set encoder axis
     _encoder = encoder; // Assign the encoder object
     _encoder->begin();
     _encoder->configMCR0(_encAxis, BYTE_2 | EN_CNTR);
     _encoder->resetCounter(_encAxis);
 
-    _encAxis = encAxis; // Set encoder axis
+
 
 
     // Set up motor control pins
@@ -201,19 +202,11 @@ void Motor::update(MotorCommand cmd_msg){
         Serial.print("Derivative gain set to: ");
         Serial.println(_Kd);
     }
-    else if (cmd_msg.cmd == "brake"){
-        brake();
-    }
-    else if (cmd_msg.cmd == "coast"){
-        coast();
-    }
-    else if (cmd_msg.cmd == "estop"){
-        estop();
-    }
     else{
         Serial.println("Invalid command");
     }
 };
+
 
 // MAIN CONTROL LOOP
 void Motor::controlLoop(){
@@ -225,7 +218,6 @@ void Motor::controlLoop(){
     _lastPos = _currentPos;
     _lastVel = _currentVel;
     _lastTime = micros();
-
 
     // Switch control loop based on control mode:
     switch(this->_controlMode){
@@ -246,11 +238,27 @@ void Motor::controlLoop(){
                 rev_drive(_motorDutyCycle);
             }
             break;
+        case 4: // Brake
+            brake();
+            break;
+        case 5: // Coast
+            coast();
+            break;
         default:
             Serial.println("Invalid control mode");
     }
 
 }
+
+void Motor::estop(){
+    // Emergency stop function
+    // Serial.println("Emergency stop activated");
+    brake(); // Brake the motor
+    _controlMode = 0; // Set control mode to ESTOP
+    _targetPos = 0.0; // Reset target position
+    _targetVel = 0.0; // Reset target velocity
+    _motorDutyCycle = 0; // Reset motor duty cycle
+};
 
 void Motor::positionControl(float targetPos){
     // Calculate the error

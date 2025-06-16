@@ -41,7 +41,7 @@ void Comms::init(){
     // Initialization code if needed
     Serial.begin(115200); // Start serial communication at 115200 baud rate
     while (!Serial) {
-        ; // Wait for serial port to connect. Needed for native USB
+        ; // Wait for serial port to connect. Needed for native USB devices
     }
 }
 

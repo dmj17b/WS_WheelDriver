@@ -38,9 +38,9 @@ def send(motor_id, cmd, val):
 
 # ── example ─────────────────────────────────────────────────
 if __name__ == "__main__":
-    send(8, 'setKp', 10)
+    send(8, 'setKp', 20)
     send(8, 'setKi', 10)
-    send(8, 'setVel', 7.5)
+    send(8, 'setVel', 3)
 
     time.sleep(5)
     send(8, 'setVel', 0)

@@ -55,6 +55,7 @@ LS7466 decoder2(DECODER2_CS_PIN);
 LS7466 decoder3(DECODER3_CS_PIN);
 
 // Initialize motor objects
+// Format: Motor(decpder_object, decoder_axis, enablePin, dirAPin, dirBPin)
 Motor M0 = Motor(&decoder0, 0, MOTOR0_EN_PIN, MOTOR0_DIR_A_PIN, MOTOR0_DIR_B_PIN);
 Motor M1 = Motor(&decoder0, 1, MOTOR1_EN_PIN, MOTOR1_DIR_A_PIN, MOTOR1_DIR_B_PIN);
 

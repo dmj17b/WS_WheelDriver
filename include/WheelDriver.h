@@ -28,7 +28,7 @@ class Motor{
         LS7466* _encoder; // Pointer to LS7466 encoder object
         uint8_t _encAxis; // Encoder number (0 or 1)
         long _encoderCount; // Motor encoder count
-        int _encoderCPR = 16; // Encoder counts per revolution
+        int _encoderCPR = 14; // Encoder counts per revolution
 
         // Motor control variables
         bool reverse = false; // Reverse motor direction
@@ -40,6 +40,7 @@ class Motor{
         float _currentPos = 0.0; // Current position
         float _currentVel = 0.0; // Current velocity
         float _currentAcc = 0.0; // Current acceleration
+        float _vel_integral = 0.0; // Integral term for velocity control
         float _lastPos = 0.0; // Last position for velocity calculation
         float _lastVel = 0.0; // Last velocity for acceleration calculation
         float _lastTime = 0.0; // Last time for velocity calculation
@@ -49,6 +50,12 @@ class Motor{
         float _Ki = 0.0; // Integral gain for PID control
         float _Kd = 0.0; // Derivative gain for PID control
         float controlOutput = 0.0; // Control output for PID control
+
+        // EWMA filtering
+        float _velFiltered = 0.0;     // Filtered velocity value
+        float _alpha = 0.2;           // Smoothing factor (tweakable)
+        bool _velFilterInitialized = false;
+
 
         // Main control parsing function:
         MotorCommand cmd_msg; // Motor command message
@@ -121,12 +128,12 @@ void Motor::setGains(float Kp, float Ki, float Kd){
 void Motor::fwd_drive(int dutyCycle){
     // Set motor direction and enable
     if (reverse == true){
-        digitalWrite(_motorDirAPin, HIGH);
-        digitalWrite(_motorDirBPin, LOW);
-    }
-    else{
         digitalWrite(_motorDirAPin, LOW);
         digitalWrite(_motorDirBPin, HIGH);
+    }
+    else{
+        digitalWrite(_motorDirAPin, HIGH);
+        digitalWrite(_motorDirBPin, LOW);
     }
     analogWrite(_motorEnablePin, abs(dutyCycle));
 };
@@ -135,12 +142,12 @@ void Motor::fwd_drive(int dutyCycle){
 void Motor::rev_drive(int dutyCycle){
     // Set motor direction and enable
     if (reverse == true){
-        digitalWrite(_motorDirAPin, LOW);
-        digitalWrite(_motorDirBPin, HIGH);
-    }
-    else{
         digitalWrite(_motorDirAPin, HIGH);
         digitalWrite(_motorDirBPin, LOW);
+    }
+    else{
+        digitalWrite(_motorDirAPin, LOW);
+        digitalWrite(_motorDirBPin, HIGH);
     }
     analogWrite(_motorEnablePin, abs(dutyCycle));
 };
@@ -210,13 +217,23 @@ void Motor::update(MotorCommand cmd_msg){
 
 // MAIN CONTROL LOOP
 void Motor::controlLoop(){
-    // Calculate the current position (angle) and velocity
+    // Calculate the current position and raw velocity
     _encoderCount = _encoder->readCounter(_encAxis);
-    _currentPos = (_encoderCount / ((float)_encoderCPR*_gearRatio))*2*PI;    // Convert encoder count to position in radians
-    _currentVel = (_currentPos - _lastPos) / (pow(10,6)*(micros() - _lastTime));    // Calculate velocity in radians per second
-    // Update the last position and time
+    _currentPos = (_encoderCount / ((float)_encoderCPR * _gearRatio)) * 2 * PI;
+    float rawVel = (_currentPos - _lastPos) / (1e-6 * (micros() - _lastTime)); // rad/s
+
+    // Apply EWMA filter to velocity
+    if (!_velFilterInitialized) {
+        _velFiltered = rawVel;
+        _velFilterInitialized = true;
+    } else {
+        _velFiltered = _alpha * rawVel + (1.0 - _alpha) * _velFiltered;
+    }
+    _currentVel = _velFiltered; // Use smoothed value for rest of control
+
+    // Update historical values
     _lastPos = _currentPos;
-    _lastVel = _currentVel;
+    _lastVel = rawVel; // optionally keep raw for debug
     _lastTime = micros();
 
     // Switch control loop based on control mode:
@@ -262,11 +279,11 @@ void Motor::estop(){
 
 void Motor::positionControl(float targetPos){
     // Calculate the error
-    float pos_error = targetPos - _currentPos;
-    float vel_error = _targetVel - _currentVel;
+    _pos_error = targetPos - _currentPos;
+    _vel_error = _targetVel - _currentVel;
 
     // Calculate the control output using PID control
-    controlOutput = _Kp * pos_error + _Kd * vel_error; // Proportional control
+    controlOutput = _Kp * _pos_error + _Kd * _vel_error; // Proportional control
 
     // Set the motor duty cycle based on the control output
     if (controlOutput > 0){
@@ -279,10 +296,16 @@ void Motor::positionControl(float targetPos){
 
 void Motor::velocityControl(float targetVel){
     // Calculate the error
-    float vel_error = targetVel - _currentVel;
+    _vel_error = targetVel - _currentVel;
+    _vel_integral += _vel_error;
+    if(_vel_error < 0.5 && _vel_error > -0.5){
+        _vel_integral = 0; // Reset integral if error is small
+    }
 
     // Calculate the control output using PID control
-    float controlOutput = _Kp * vel_error; // Proportional control
+    float controlOutput = _Kp * _vel_error; // Proportional control
+
+    _motorDutyCycle = controlOutput; // Update motor duty cycle
 
     // Set the motor duty cycle based on the control output
     if (controlOutput > 0){

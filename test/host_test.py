@@ -38,8 +38,11 @@ def send(motor_id, cmd, val):
 
 # ── example ─────────────────────────────────────────────────
 if __name__ == "__main__":
-    send(0, 'setMode', 1)
-    time.sleep(0.1)  # wait for Teensy to process the command
-    send(0, 'setDuty', 1000)
+    send(8, 'setKp', 10)
+    send(8, 'setKi', 10)
+    send(8, 'setVel', 7.5)
+
+    time.sleep(5)
+    send(8, 'setVel', 0)
 
 

@@ -42,7 +42,7 @@
 
 #define MOTOR6_EN_PIN 15 
 #define MOTOR6_DIR_A_PIN 40
-#define MOTOR6_DIR_B_PIN 31
+#define MOTOR6_DIR_B_PIN 39
 
 #define MOTOR7_EN_PIN 14 
 #define MOTOR7_DIR_A_PIN 31
@@ -64,15 +64,15 @@ Motor M3 = Motor(&decoder1, 0, MOTOR3_EN_PIN, MOTOR3_DIR_A_PIN, MOTOR3_DIR_B_PIN
 Motor M4 = Motor(&decoder2, 1, MOTOR4_EN_PIN, MOTOR4_DIR_A_PIN, MOTOR4_DIR_B_PIN);
 Motor M5 = Motor(&decoder2, 0, MOTOR5_EN_PIN, MOTOR5_DIR_A_PIN, MOTOR5_DIR_B_PIN);
 
-Motor M6 = Motor(&decoder3, 1, MOTOR6_EN_PIN, MOTOR6_DIR_A_PIN, MOTOR6_DIR_B_PIN);
-Motor M7 = Motor(&decoder3, 0, MOTOR7_EN_PIN, MOTOR7_DIR_A_PIN, MOTOR7_DIR_B_PIN);
+Motor M6 = Motor(&decoder3, 0, MOTOR6_EN_PIN, MOTOR6_DIR_A_PIN, MOTOR6_DIR_B_PIN);
+Motor M7 = Motor(&decoder3, 1, MOTOR7_EN_PIN, MOTOR7_DIR_A_PIN, MOTOR7_DIR_B_PIN);
 
 // Create an array of motor pointers for easy access
 Motor* motors[] = {&M0, &M1, &M2, &M3, &M4, &M5, &M6, &M7};
 
 // Define motor gains for all motors:
-float Kp = 1.0; // Proportional gain
-float Ki = 0.01; // Integral gain
+float Kp = 10.0; // Proportional gain
+float Ki = 0.00; // Integral gain
 float Kd = 0.0; // Derivative gain
 
 
@@ -90,35 +90,49 @@ void setup() {
    // Assign universal motor parameters
    for(int i = 0; i < 8; i++){
      motors[i]->setGains(Kp, Ki, Kd); // Set gains for each motor
-     motors[i]->_controlMode = 3; // Set initial control mode
+     motors[i]->_controlMode = 2; // Set initial control mode
    }
    Serial.println("Program started");
    digitalWrite(LED_PIN, HIGH); // Turn on LED to indicate setup completion
    
 }
  
- int test_duty = 0;
- 
+ float test_vel = 10; // Test velocity for motor
+ float test_duty = 100; // Test duty cycle for motors
+
  /***** LOOP ******/
  void loop() {
     // Check for incoming commands. If no command is received, cmd_msg will be set to "none"
-    
+    cmd_msg = com.getCMD();
+    if (cmd_msg.cmd != "none") {
+        //If valid command received, update the motor ID and command
+        if (cmd_msg.motorID < 8) {
+          // Update motors based on received command
+          motors[cmd_msg.motorID]->update(cmd_msg);
+        }
+        // If motorID is 8, send the command to all motors
+        else if (cmd_msg.motorID == 8){
+          // Send same command to all motors
+          for(int i = 0; i < 8; i++){
+            motors[i]->update(cmd_msg);
+          }
 
-    // // Test reading encoder values
+        }
+    }
+
+
+    // Test reading encoder values
     for(int i = 0; i<8; i++){
       motors[i]->controlLoop();
-      motors[i]->_motorDutyCycle = test_duty; // Set motor duty cycle
       Serial.print("Motor ");
       Serial.print(i);
       Serial.print(" Position: ");
-      Serial.print(motors[i]->_encoderCount);
+      Serial.print(motors[i]->_currentPos);
       Serial.print(" Velocity: ");
-      Serial.println(motors[i]->getVel());
+      Serial.print(motors[i]->getVel());
+      Serial.print("  Duty cycle: ");
+      Serial.println(motors[i]->_motorDutyCycle);
     }
 
-    test_duty+=1;
-    if(test_duty > 55){
-      test_duty = 0; // Reset duty cycle after reaching max value
-    }
-    delay(10);
+    delay(1);
  }

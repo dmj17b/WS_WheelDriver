@@ -21,15 +21,6 @@ port = find_teensy_port(VENDOR_ID, PRODUCT_ID)
 ser  = serial.Serial(port, 115200, timeout=0.1)
 print(f"→ Connected to Teensy on {port}")
 
-# ── reader thread ───────────────────────────────────────────
-# def read_thread():
-#     while True:
-#         line = ser.readline().decode('ascii', errors='ignore')#.strip()
-#         if line:
-#             print(line)
-
-# t = threading.Thread(target=read_thread, daemon=True)
-# t.start()
 
 # ── send helper ─────────────────────────────────────────────
 def send(motor_id, cmd, val):

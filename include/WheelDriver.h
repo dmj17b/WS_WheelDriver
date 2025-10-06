@@ -315,3 +315,4 @@ void Motor::velocityControl(float targetVel){
         rev_drive(controlOutput);
     }
 }
+

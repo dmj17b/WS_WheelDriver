@@ -122,17 +122,12 @@ void setup() {
     }
 
 
-    // Test reading encoder values
+    // Perform main control loop and read back velocity for all motors
     for(int i = 0; i<8; i++){
       motors[i]->controlLoop();
-      Serial.print("Motor ");
       Serial.print(i);
-      Serial.print(" Position: ");
-      Serial.print(motors[i]->_currentPos);
-      Serial.print(" Velocity: ");
-      Serial.print(motors[i]->getVel());
-      Serial.print("  Duty cycle: ");
-      Serial.println(motors[i]->_motorDutyCycle);
+      Serial.print(",");
+      Serial.println(motors[i]->_currentVel);
     }
 
     delay(1);

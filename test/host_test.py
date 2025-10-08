@@ -21,6 +21,55 @@ port = find_teensy_port(VENDOR_ID, PRODUCT_ID)
 ser  = serial.Serial(port, 115200, timeout=0.1)
 print(f"→ Connected to Teensy on {port}")
 
+def read_from_port(ser):
+    """
+    Read and parse streaming data in format (int,float) from serial port.
+    Returns parsed data as tuple or None if parsing fails.
+    """
+    while True:
+        line = ser.readline().decode('ascii').strip()
+        if line:
+            # print(f"← Raw: {line}")
+            
+            # Parse the (int,float) format
+            parsed_data = parse_serial_data(line)
+            if parsed_data:
+                int_value, float_value = parsed_data
+                print(f"→ Parsed: int={int_value}, float={float_value}")
+                
+
+def parse_serial_data(line):
+    """
+    Parse a line in format int,float and return tuple of (int, float).
+    Returns None if parsing fails.
+    
+    Examples:
+    - "123,45.67" -> (123, 45.67)
+    - "0,-12.34" -> (0, -12.34)
+    - "-5,3.14159" -> (-5, 3.14159)
+    """
+    try:
+        # Remove whitespace and split by comma
+        line = line.strip()
+        if not line:  # Skip empty lines
+            return None
+        
+        parts = line.split(',')
+        
+        if len(parts) != 2:
+            return None
+        
+        # Parse int and float
+        int_part = int(parts[0].strip())
+        float_part = float(parts[1].strip())
+        
+        return (int_part, float_part)
+        
+    except (ValueError, IndexError) as e:
+        print(f"Parse error: {e} for line: '{line}'")
+        return None
+
+
 
 # ── send helper ─────────────────────────────────────────────
 def send(motor_id, cmd, val):
@@ -32,7 +81,7 @@ if __name__ == "__main__":
     send(8, 'setKp', 20)
     send(8, 'setKi', 10)
     send(8, 'setVel', 3)
-
+    read_from_port(ser)
     time.sleep(5)
     send(8, 'setVel', 0)
 

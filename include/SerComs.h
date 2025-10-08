@@ -1,4 +1,8 @@
 #include <Arduino.h>
+#include "pb_encode.h"
+#include "pb_decode.h"
+#include "pb_common.h"
+
 
 // Motor Command Structure
 // MotorID
@@ -16,6 +20,7 @@ struct MotorData{
 	String param;
 	float val;
 };
+
 
 
 // Class to handle serial communication

@@ -24,7 +24,7 @@
 #define MOTOR1_DIR_A_PIN 7
 #define MOTOR1_DIR_B_PIN 8
 
-#define MOTOR2_EN_PIN 9 // Not a pwm pin :(
+#define MOTOR2_EN_PIN 9 
 #define MOTOR2_DIR_A_PIN 19
 #define MOTOR2_DIR_B_PIN 18
 

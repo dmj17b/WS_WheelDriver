@@ -90,7 +90,7 @@ void setup() {
  
    // Assign universal motor parameters
    for(int i = 0; i < 8; i++){
-     motors[i]->setGains(Kp, Ki, Kd); // Set gains for each motor
+    //  motors[i]->setGains(Kp, Ki, Kd); // Set gains for each motor
      motors[i]->_controlMode = 2; // Set initial control mode
    }
    Serial.println("Program started");

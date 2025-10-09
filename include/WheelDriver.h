@@ -7,12 +7,6 @@
 #include "SerComs.h"
 #include <Arduino.h>
 
-#define IDLE 0
-#define POSITION 1
-#define VELOCITY 2
-#define DUTY 3
-#define BRAKE 4
-
 
 class Motor{
     public:
@@ -73,8 +67,10 @@ class Motor{
         void brake();
         void coast();
         void estop();
-        void setGains(float Kp, float Ki, float Kd);
-        
+        void set_Kp(float Kp);
+        void set_targetVel(float targetVel);
+        void set_controlMode(uint8_t mode);
+
 
         // Data retrieval functions (for returning to host computer)
         float getPos();
@@ -90,9 +86,6 @@ Motor :: Motor(LS7466 *encoder, uint8_t encAxis, uint8_t EN, uint8_t DIR_A, uint
     _encoder->begin();
     _encoder->configMCR0(_encAxis, BYTE_2 | EN_CNTR);
     _encoder->resetCounter(_encAxis);
-
-
-
 
     // Set up motor control pins
     _motorEnablePin = EN;
@@ -114,14 +107,17 @@ float Motor::getVel(){
     return _currentVel;
 };
 
-// Function to set control gains
-void Motor::setGains(float Kp, float Ki, float Kd){
-    // Set PID gains
-    _Kp = Kp;
-    _Ki = Ki;
-    _Kd = Kd;
+void Motor::set_controlMode(uint8_t mode){
+    _controlMode = mode;
 };
 
+void Motor::set_Kp(float Kp){
+    _Kp = Kp;
+};
+
+void Motor::set_targetVel(float targetVel){
+    _targetVel = targetVel;
+};
 
 
 // Function to forward drive the motor
@@ -163,56 +159,11 @@ void Motor::brake(){
 
 void Motor::coast(){
     // Set motor direction and enable
-    digitalWrite(_motorDirAPin, LOW);
-    digitalWrite(_motorDirBPin, LOW);
+    digitalWrite(_motorDirAPin, HIGH);
+    digitalWrite(_motorDirBPin, HIGH);
     analogWrite(_motorEnablePin, 0);
 };
 
-// UPDATE FUNCTION handles incomming command messages to either change control mode,
-// set target position, change gains, etc.
-void Motor::update(MotorCommand cmd_msg){
-    // Update the command message
-    this->cmd_msg = cmd_msg;
-    if(cmd_msg.cmd == "setMode"){
-        this->_controlMode = cmd_msg.val;
-        Serial.println("Control mode set to: ");
-        Serial.println(this->_controlMode);
-    }
-    else if (cmd_msg.cmd == "setPos"){
-        _targetPos = cmd_msg.val;
-        Serial.print("Target position set to: ");
-        Serial.println(_targetPos);
-    }
-    else if (cmd_msg.cmd == "setVel"){
-        _targetVel = cmd_msg.val;
-    }
-    else if (cmd_msg.cmd == "setDuty"){
-        _motorDutyCycle = cmd_msg.val;
-    }
-    else if (cmd_msg.cmd == "reverseDirection"){
-        reverse = !reverse; // Toggle reverse direction
-        Serial.print("Motor reverse set to: ");
-        Serial.println(reverse);
-    }
-    else if (cmd_msg.cmd == "setKp"){
-        _Kp = cmd_msg.val;
-        Serial.print("Proportional gain set to: ");
-        Serial.println(_Kp);
-    }
-    else if (cmd_msg.cmd == "setKi"){
-        _Ki = cmd_msg.val;
-        Serial.print("Integral gain set to: ");
-        Serial.println(_Ki);
-    }
-    else if (cmd_msg.cmd == "setKd"){
-        _Kd = cmd_msg.val;
-        Serial.print("Derivative gain set to: ");
-        Serial.println(_Kd);
-    }
-    else{
-        Serial.println("Invalid command");
-    }
-};
 
 
 // MAIN CONTROL LOOP

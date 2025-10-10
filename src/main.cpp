@@ -80,7 +80,7 @@ MotorLink motor_link;
 
 // Timing for sending state back to the Orin
 const long STATE_INTERVAL_MS = 1; // 1000ms / 500Hz
-const long STATE_INTERVAL_US = 100; 
+const long STATE_INTERVAL_US = 1000; 
 unsigned long last_state_time = 0;
 
 // Debug control - set to false to disable debug output
@@ -168,7 +168,8 @@ void loop() {
         current_state.velocity_count = 8;
         for (int i = 0; i < 8; i++) {
             // --- READ YOUR ACTUAL MOTOR ENCODER/SENSOR VALUES HERE ---
-            current_state.velocity[i] = motors[i]->getVel(); // rad/s           
+            current_state.velocity[i] = motors[i]->getVel(); // rad/s       
+            // Serial.println(motors[i]->getVel());    
         }
 
         motor_link.sendState(current_state);

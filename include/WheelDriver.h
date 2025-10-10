@@ -168,24 +168,68 @@ void Motor::coast(){
 
 // MAIN CONTROL LOOP
 void Motor::controlLoop(){
-    // Calculate the current position and raw velocity
-    _encoderCount = _encoder->readCounter(_encAxis);
-    _currentPos = (_encoderCount / ((float)_encoderCPR * _gearRatio)) * 2 * PI;
-    float rawVel = (_currentPos - _lastPos) / (1e-6 * (micros() - _lastTime)); // rad/s
-
-    // Apply EWMA filter to velocity
-    if (!_velFilterInitialized) {
-        _velFiltered = rawVel;
+    unsigned long currentTime = micros();
+    
+    // Initialize _lastTime on first run
+    if (_lastTime == 0.0) {
+        _lastTime = currentTime;
+        _encoderCount = _encoder->readCounter(_encAxis);
+        _currentPos = (_encoderCount / ((float)_encoderCPR * _gearRatio)) * 2 * PI;
+        _lastPos = _currentPos;
+        _currentVel = 0.0;
+        _velFiltered = 0.0;
         _velFilterInitialized = true;
-    } else {
-        _velFiltered = _alpha * rawVel + (1.0 - _alpha) * _velFiltered;
+        return; // Skip first iteration
     }
-    _currentVel = _velFiltered; // Use smoothed value for rest of control
-
+    
+    // Calculate time delta with overflow protection
+    unsigned long timeDelta = currentTime - (unsigned long)_lastTime;
+    
+    // Skip calculation if time delta is too small (< 100 microseconds) or too large (overflow)
+    if (timeDelta < 100 || timeDelta > 1000000) {
+        _lastTime = currentTime;
+        return;
+    }
+    
+    // Calculate the current position
+    long newEncoderCount = _encoder->readCounter(_encAxis);
+    
+    // Check for encoder overflow/underflow
+    long encoderDelta = newEncoderCount - _encoderCount;
+    if (abs(encoderDelta) > 1000000) { // Probably an overflow
+        _encoderCount = newEncoderCount;
+        _lastTime = currentTime;
+        return;
+    }
+    
+    _encoderCount = newEncoderCount;
+    _currentPos = (_encoderCount / ((float)_encoderCPR * _gearRatio)) * 2 * PI;
+    
+    // Calculate velocity with safety checks
+    float posDelta = _currentPos - _lastPos;
+    float timeDeltaSeconds = timeDelta * 1e-6;
+    
+    // Safety check for reasonable values
+    if (timeDeltaSeconds > 0.0001 && abs(posDelta) < 100.0) { // Reasonable position change
+        float rawVel = posDelta / timeDeltaSeconds;
+        
+        // Limit velocity to reasonable range (e.g., ±1000 rad/s)
+        if (abs(rawVel) < 1000.0) {
+            // Apply EWMA filter to velocity
+            if (!_velFilterInitialized) {
+                _velFiltered = rawVel;
+                _velFilterInitialized = true;
+            } else {
+                _velFiltered = _alpha * rawVel + (1.0 - _alpha) * _velFiltered;
+            }
+            _currentVel = _velFiltered;
+        }
+        // If velocity is unreasonable, keep the old value
+    }
+    
     // Update historical values
     _lastPos = _currentPos;
-    _lastVel = rawVel; // optionally keep raw for debug
-    _lastTime = micros();
+    _lastTime = currentTime;
 
     // Switch control loop based on control mode:
     switch(this->_controlMode){
@@ -213,7 +257,7 @@ void Motor::controlLoop(){
             coast();
             break;
         default:
-            Serial.println("Invalid control mode");
+            estop(); // Default to safe state instead of printing
     }
 
 }

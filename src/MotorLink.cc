@@ -24,7 +24,7 @@ const uint8_t CRC8_J1850_TABLE[256] = {
     0x7F, 0x62, 0x45, 0x58, 0x0B, 0x16, 0x31, 0x2C, 0x97, 0x8A, 0xAD, 0xB0, 0xE3, 0xFE, 0xD9, 0xC4
 };
 
-uint8_t calculate_crc8_j1850(const uint8_t* data, size_t len) {
+uint8_t calculate_crc8(const uint8_t* data, size_t len) {
     uint8_t crc = CRC8_J1850_INIT;
     for (size_t i = 0; i < len; ++i) {
         crc = CRC8_J1850_TABLE[crc ^ data[i]];
@@ -79,7 +79,7 @@ void MotorLink::update() {
                 if (bytes_received_ == payload_len_ + 1) { // Payload + CRC
                     const uint8_t* payload_ptr = rx_buffer_;
                     const uint8_t received_checksum = rx_buffer_[payload_len_];
-                    uint8_t calculated_checksum = calculate_crc8_j1850(payload_ptr, payload_len_);
+                    uint8_t calculated_checksum = calculate_crc8(payload_ptr, payload_len_);
 
                     if (calculated_checksum == received_checksum) {
                         pb_istream_t stream = pb_istream_from_buffer(payload_ptr, payload_len_);
@@ -112,7 +112,7 @@ bool MotorLink::sendState(const WheelMotorState& state) {
     }
     size_t payload_len = stream.bytes_written;
 
-    uint8_t checksum = calculate_crc8_j1850(payload_buffer, payload_len);
+    uint8_t checksum = calculate_crc8(payload_buffer, payload_len);
 
     Serial.write(START_OF_FRAME);
     Serial.write(payload_len);
@@ -121,5 +121,3 @@ bool MotorLink::sendState(const WheelMotorState& state) {
 
     return true;
 }
-
- 

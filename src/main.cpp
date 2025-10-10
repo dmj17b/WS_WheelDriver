@@ -79,12 +79,20 @@ Motor* motors[] = {&M0, &M1, &M2, &M3, &M4, &M5, &M6, &M7};
 MotorLink motor_link;
 
 // Timing for sending state back to the Orin
-const long STATE_INTERVAL_MS = 1; // 1000ms / 500Hz
+const long STATE_INTERVAL_MS = 1; // 
 const long STATE_INTERVAL_US = 1000; 
 unsigned long last_state_time = 0;
 
+// Serial port timeout management
+const unsigned long COMMAND_TIMEOUT_MS = 500; // 500ms timeout - put motors in idle if no commands received
+unsigned long last_command_time = 0;
+bool motors_in_timeout_idle = false;
+
 // Debug control - set to false to disable debug output
 const bool DEBUG_ENABLED = false;
+
+// Track the last received control mode to report back
+ControlMode last_received_mode = ControlMode_IDLE;
 
 void setup() {
     // Start the USB serial for communication with the Orin
@@ -98,6 +106,10 @@ void setup() {
         motors[i]->set_Kp(10.0); // Set a default Kp value
     }
     
+    // Initialize timeout tracking
+    last_command_time = millis();
+    motors_in_timeout_idle = false;
+    
     if (DEBUG_ENABLED) {
         motor_link.debugPrint("Teensy ready to receive commands via USB Serial");
     }
@@ -110,6 +122,10 @@ void loop() {
     // 2. Check if a new, valid command has been received and parsed.
     WheelMotorCommand command;
     if (motor_link.readCommand(command)) {
+        // Update last command time whenever we receive a valid command
+        last_command_time = millis();
+        motors_in_timeout_idle = false; // Clear timeout idle state
+        
         // --- YOUR MOTOR CONTROL LOGIC GOES HERE ---
         // Act on the new command immediately.
         if (command.control_mode == VELOCITY && command.velocity_setpoint_count == 8) {
@@ -120,7 +136,7 @@ void loop() {
                 motors[i]->set_Kp(command.kp[i]);
                 motors[i]->set_controlMode(2); // Set to velocity control mode
                 motors[i]->set_targetVel(command.velocity_setpoint[i]);
-            }            
+            }
             if (DEBUG_ENABLED) {
                 motor_link.debugPrint("Velocity command received for 8 motors");
             }
@@ -147,10 +163,35 @@ void loop() {
             }
         }
         
+        // Update the last received control mode
+        last_received_mode = command.control_mode;
+        
         // Optional debug output (only if debugging is enabled)
         if (DEBUG_ENABLED) {
             String debug_msg = "New command received! Mode: " + String(command.control_mode);
             motor_link.debugPrint(debug_msg);
+        }
+    }
+
+    // 2.5. Check for command timeout or disconnected serial port - put motors in idle if needed
+    bool connection_lost = !motor_link.isConnected();
+    bool command_timeout = (millis() - last_command_time) > COMMAND_TIMEOUT_MS;
+    
+    if (!motors_in_timeout_idle && (connection_lost || command_timeout)) {
+        // Put all motors into idle state due to communication timeout or disconnection
+        for (int i = 0; i < 8; i++) {
+            motors[i]->set_controlMode(0); // Set to idle (estop) mode
+        }
+        digitalWrite(LED_PIN, LOW); // Turn off LED to indicate idle
+        motors_in_timeout_idle = true; // Mark that we're in timeout idle state
+        last_received_mode = ControlMode_IDLE; // Update state to reflect idle
+        
+        if (DEBUG_ENABLED) {
+            if (connection_lost) {
+                motor_link.debugPrint("Serial port disconnected - motors set to idle");
+            } else if (command_timeout) {
+                motor_link.debugPrint("Serial timeout - motors set to idle");
+            }
         }
     }
 
@@ -164,7 +205,7 @@ void loop() {
         last_state_time = micros();
 
         WheelMotorState current_state = WheelMotorState_init_zero;
-        current_state.control_mode = command.control_mode; // Report current mode
+        current_state.control_mode = last_received_mode; // Use the last known valid mode
         current_state.velocity_count = 8;
         for (int i = 0; i < 8; i++) {
             // --- READ YOUR ACTUAL MOTOR ENCODER/SENSOR VALUES HERE ---

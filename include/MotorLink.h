@@ -14,6 +14,9 @@ public:
     bool readCommand(WheelMotorCommand& command);
     bool sendState(const WheelMotorState& state);
     
+    // Connection status checking
+    bool isConnected() const { return Serial && Serial.availableForWrite(); }
+    
     // Debug output control
     void enableDebug(bool enable) { debug_enabled_ = enable; }
     void debugPrint(const char* message);

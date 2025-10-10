@@ -47,7 +47,7 @@ class Motor{
 
         // EWMA filtering
         float _velFiltered = 0.0;     // Filtered velocity value
-        float _alpha = 0.2;           // Smoothing factor (tweakable)
+        float _alpha = 0.99;           // Smoothing factor (tweakable)
         bool _velFilterInitialized = false;
 
 
